@@ -8,7 +8,7 @@
 SYSTEM_MODE(MANUAL); // Turn cell modem off for now
 const unsigned long SEND_INTERVAL_MS = 30000; // How often we poll SeapHOx in millis
 unsigned long lastSend = 0; // Use for wait timing
-
+char* new_var;
 
 void setup() {
 	Cellular.off();
@@ -38,8 +38,18 @@ void loop() {
 	  delay(500);                   // wait for response (~ 10 seconds)
 
 		String s = Serial1.readString();
-		Serial.printlnf("got %s", s.c_str());
-		Serial.println("REPEAT");
-	}
+		const char* s_args = s.c_str();
+		Serial.printlnf("got %s", s.c_str()); // s.c_str() gives args of s
+
+		// Parse out SeapHOx response; TODO: clean up malloc issues from using strdup by using free()
+		new_var = strtok(strdup(s_args), "\t");
+		while (new_var != NULL) {
+			Serial.println(new_var);
+			new_var = strtok(NULL, " \t");
+		}
+
+		Serial.println("REPEAT"); // just for kicks
+  }
+
 	delay(100); // in case it matters that otherwise it'll just spin at clock speed
 }
