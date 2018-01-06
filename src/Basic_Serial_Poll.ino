@@ -6,6 +6,7 @@
  */
 
 
+int counter = 0;
 int max3232_switch = A1; // DIO to turn on/off MAX3232 chip
 SYSTEM_MODE(MANUAL); // Turn cell modem off for now
 const unsigned long SEND_INTERVAL_MS = 30000; // How often we poll SeapHOx in millis
@@ -26,7 +27,7 @@ void setup() {
 	Serial1.begin(115200);
 
 	// Wait for a line to arrive, max this out for now
-	Serial1.setTimeout(SEND_INTERVAL_MS);
+	Serial1.setTimeout(20000);
 
   // Wait a few seconds then let us know program is running
   delay(5000);
@@ -40,7 +41,6 @@ void loop() {
 		lastSend = millis(); // don't put anything above this to keep loop timing tight
 
 		digitalWrite(max3232_switch, HIGH); // turn on MAX3232
-		// delay(1500);									// this is superstition; I don't know how long that thing needs to "warm up"
 	  Serial1.print("a");         	// arbitrary wake char
 	  delay(500);                   // let SeapHOx wake up
 	  Serial1.println("ts");        // take sample
@@ -57,13 +57,12 @@ void loop() {
 			new_var = strtok(NULL, " \t");
 		}
 
-		Serial.println("REPEAT"); // just for kicks
+		// digitalWrite(max3232_switch, LOW); // turn off MAX3232
 
-		// Wait till we've received response before turning of MAX3232
-		// delay(1500);
-		// Serial1.flush();
-		// digitalWrite(max3232_switch, LOW);
+		Serial.printlnf("Loop %i; REPEAT\n", counter);
+		counter++;
   }
 
 	delay(100); // in case it matters that otherwise it'll just spin at clock speed
+
 }
