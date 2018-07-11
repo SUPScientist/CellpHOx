@@ -51,6 +51,7 @@ void loop() {
 		// Serial1.print("a");         	// arbitrary wake char
 		delay(500);
 	  Serial1.println("ts");        // take sample
+		Serial.println("ts"); 				// just to show on screen
 
 		// Parse out SeapHOx response; TODO: clean up malloc issues from using strdup by using free()
 		s = Serial1.readString();			// read response
