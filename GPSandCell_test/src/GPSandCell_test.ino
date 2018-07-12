@@ -135,9 +135,6 @@ void loop() {
 
   case SLEEP_STATE:
 
-  // Uncomment this line to power down the GPS. It saves power but may increase the amount
-  // of time to get a fix.
-
     Serial.println("going to sleep");
     delay(500);
 
@@ -145,9 +142,9 @@ void loop() {
     int secondsToSleep = 180;
 
     // Test delay vs. sleep
-    delay(180000);
+    // delay(180000);
     stateTime = millis();
-    // System.sleep(SLEEP_MODE_DEEP, secondsToSleep);
+    System.sleep(SLEEP_MODE_DEEP, secondsToSleep);
 
     // It'll only make it here if the sleep call doesn't work for some reason
     state = GPS_WAIT_STATE;
@@ -160,24 +157,24 @@ void loop() {
 void displayInfo()
 {
   if (millis() - lastSerial >= SERIAL_PERIOD_MS) {
-  lastSerial = millis();
+    lastSerial = millis();
 
-  char buf[128];
-  if (gps.location.isValid()) {
-  snprintf(buf, sizeof(buf), "%f,%f", gps.location.lat(), gps.location.lng());
-  if (gettingFix) {
-  gettingFix = false;
-  unsigned long elapsed = millis() - startFix;
-  Serial.printlnf("%lu milliseconds to get GPS fix", elapsed);
-  }
-  }
-  else {
-  strcpy(buf, "no location");
-  if (!gettingFix) {
-  gettingFix = true;
-  startFix = millis();
-  }
-  }
-  Serial.println(buf);
+    char buf[128];
+    if (gps.location.isValid()) {
+      snprintf(buf, sizeof(buf), "%f,%f", gps.location.lat(), gps.location.lng());
+      if (gettingFix) {
+        gettingFix = false;
+        unsigned long elapsed = millis() - startFix;
+        Serial.printlnf("%lu milliseconds to get GPS fix", elapsed);
+      }
+    }
+    else {
+      strcpy(buf, "no location");
+      if (!gettingFix) {
+        gettingFix = true;
+        startFix = millis();
+      }
+    }
+    Serial.println(buf);
   }
 }
