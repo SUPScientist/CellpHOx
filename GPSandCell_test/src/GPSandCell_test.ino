@@ -28,7 +28,8 @@ const unsigned long MAX_TIME_TO_PUBLISH_MS = 60000; // Only stay awake for 60 se
 const unsigned long MAX_TIME_FOR_GPS_FIX_MS = 120000; // Only stay awake for 3 minutes trying to get a GPS fix
 const unsigned long TIME_AFTER_PUBLISH_MS = 4000; // After publish, wait 4 seconds for data to go out
 const unsigned long TIME_AFTER_BOOT_MS = 5000; // At boot, wait 5 seconds before going to sleep again (after coming online)
-const unsigned long SERIAL_PERIOD_MS = 5000;
+const unsigned long SERIAL_PERIOD_MS = 5000; // Interval between GPS serial port checks
+const unsigned long SLEEP_TIME_SEC = 1800; // Deep sleep time
 
 // Stuff for the finite state machine
 enum State { PUBLISH_STATE, SLEEP_STATE, SLEEP_WAIT_STATE, BOOT_WAIT_STATE, GPS_WAIT_STATE };
@@ -138,15 +139,22 @@ void loop() {
     Serial.println("going to sleep");
     delay(500);
 
-    // Sleep
-    int secondsToSleep = 180;
-
     // Test delay vs. sleep
     // delay(180000);
-    stateTime = millis();
-    System.sleep(SLEEP_MODE_DEEP, secondsToSleep);
+
+    // Calculate sleep time
+  	int nextSampleMin = 5; // sample at 5 past the hour
+  	int currentHour = Time.hour();
+  	int currentSecond = Time.now()%86400; // in UTC
+
+  	// Calculate seconds since midnight of next sample
+  	int nextSampleSec = (currentHour+1)*60*60+nextSampleMin*60; // sample at this time
+   	int secondsToSleep = nextSampleSec - currentSecond;
+  	Serial.printf("Sleep for %d seconds\n", secondsToSleep);
+   	System.sleep(SLEEP_MODE_DEEP, secondsToSleep);
 
     // It'll only make it here if the sleep call doesn't work for some reason
+    stateTime = millis();
     state = GPS_WAIT_STATE;
     break;
 
