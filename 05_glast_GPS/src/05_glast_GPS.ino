@@ -113,7 +113,7 @@ void loop() {
   /*** Start here. Continue spinning in loop() while in GPS_WAIT_STATE to see
   if we get a GPS fix. If we get a fix or time exceeds MAX_TIME_FOR_GPS_FIX_MS, that'll
   kick us into PUBLISH_STATE. ***/
-  case GPS_WAIT_STATE:
+  case GPS_WAIT_STATE: {
     Particle.connect();
     if (gps.location.isValid()) {
     // Got a GPS fix
@@ -129,6 +129,7 @@ void loop() {
       state = PUBLISH_STATE;
       break;
     }
+  }
   break;
 
   //////////////////////////////////////////////////////////////////////////////
@@ -139,7 +140,7 @@ void loop() {
 
   If not connected, still poll SeapHOx and print out response over USB serial then go to SLEEP_STATE.
   ***/
-  case PUBLISH_STATE:
+  case PUBLISH_STATE: {
 
     // Poll SeapHOx:
     // Clean out any residual junk in buffer and restart serial port
@@ -158,7 +159,7 @@ void loop() {
     char* each_var = strtok(strdup(s_args), "\t");
 
     // Parse SeapHOx response
-    parseSeapHOx(each_var); 
+    parseSeapHOx(each_var);
 
     // Put Electron, SeapHOx, and GPS data into data buffer and print to screen
     char data[100];
@@ -194,6 +195,7 @@ void loop() {
         state = SLEEP_STATE;
       }
     }
+  }
   break;
 
   //////////////////////////////////////////////////////////////////////////////
@@ -201,12 +203,9 @@ void loop() {
   /*** Get here from PUBLISH_STATE and go to GPS_WAIT_STATE (if code makes it that far)
   or SLEEP_MODE_DEEP after calculating a wakeup time based off of the current time from the cloud.
   ***/
-  case SLEEP_STATE:
+  case SLEEP_STATE: {
     Serial.println("going to sleep");
     delay(500);
-
-    // Test delay vs. sleep
-    // delay(180000);
 
     // Calculate sleep time
   	int nextSampleMin = 5; // sample at 5 past the hour
@@ -222,6 +221,7 @@ void loop() {
     // It'll only make it here if the sleep call doesn't work for some reason
     stateTime = millis();
     state = GPS_WAIT_STATE;
+  }
   break;
 
   }
