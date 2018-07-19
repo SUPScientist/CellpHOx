@@ -162,10 +162,10 @@ void loop() {
     parseSeapHOx(each_var);
 
     // Put Electron, SeapHOx, and GPS data into data buffer and print to screen
-    char data[100];
+    char data[120];
     float cellVoltage = batteryMonitor.getVCell();
     float stateOfCharge = batteryMonitor.getSoC();
-    snprintf(data, sizeof(data), "%.02f,%.02f,%f,%f,%.3f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.02f,%.02f",
+    snprintf(data, sizeof(data), "%.02f,%.02f,%f,%f,%s,%s,%.3f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f",
               cellVoltage, stateOfCharge, latitude, longitude,
               SeapHOx_Cell.Board_Date, SeapHOx_Cell.Board_Time,
               SeapHOx_Cell.Main_Batt_Volt, SeapHOx_Cell.V_FET_INT,
