@@ -1,10 +1,11 @@
 #include "Particle.h"
-#include "Serial5/Serial5.h"
+// #include "Serial5/Serial5.h" // if we use Asset Tracker
 
 SYSTEM_MODE(AUTOMATIC);
 
 // Global objects
 FuelGauge batteryMonitor;
+PMIC pmic;
 
 // Forward declarations
 void parseSeapHOx(); // parse response from SeapHOx of "ts" "gdata" or "glast" command from Electron
@@ -66,6 +67,9 @@ unsigned long stateTime = 0;
 unsigned long lastSerial = 0;
 
 void setup() {
+  //set charging current to 1024mA (512 + 512 offset) (charge faster!):
+  pmic.setChargeCurrent(0,0,1,0,0,0);
+
   // Start here when waking up out of SLEEP_MODE_DEEP
   state = PUBLISH_STATE;
 
@@ -73,11 +77,9 @@ void setup() {
   Serial.begin(9600);
   Serial.println("Awake. Turn cell on.");
 
-  // The GPS module on the AssetTracker is connected to Serial1 and D6
-  Serial1.begin(9600);
 
   // SeapHOx serial; wait TIMEOUT_SEAPHOX_MS for a line to arrive
-  Serial5.setTimeout(TIMEOUT_SEAPHOX_MS);
+  Serial1.setTimeout(TIMEOUT_SEAPHOX_MS);
 }
 
 
@@ -100,19 +102,21 @@ void loop() {
     Particle.connect();
     // Poll SeapHOx:
     // Clean out any residual junk in buffer and restart serial port
-    Serial5.end();
+    Serial1.end();
     delay(1000);
-    Serial5.begin(115200);
+    Serial1.begin(115200);
     delay(500);
 
     // Get data in file after current file pointer
-    Serial5.println("glast");
+    Serial1.println("glast");
 
     // Read SeapHOx response
-    s = Serial5.readString();			// read response
+    s = Serial1.readString();			// read response
     String s2 = s.replace("Error.txt f_read error: FR_OK\r\n", "");
     const char* s_args = s2.c_str();
     char* each_var = strtok(strdup(s_args), "\t");
+
+    Serial.println(s2);
 
     // Parse SeapHOx response
     parseSeapHOx(each_var);
