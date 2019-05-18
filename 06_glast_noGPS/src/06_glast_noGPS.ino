@@ -12,7 +12,7 @@ void parseSeapHOx(); // parse response from SeapHOx of "ts" "gdata" or "glast" c
 
 // This is the name of the Particle event to publish for battery or movement detection events
 // It is a private event.
-const char *eventName = "CpHOx1";
+const char *eventName = "CpHOx2";
 
 // Various timing constants
 const unsigned long MAX_TIME_TO_PUBLISH_MS = 60000; // Only stay awake for 60 seconds trying to connect to the cloud and publish
