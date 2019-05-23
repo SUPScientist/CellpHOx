@@ -1,9 +1,3 @@
-/*
- * Project seaPHOX
- * Description:
- * Author:
- * Date:
- */
 #include "Particle.h"
 // #include "Serial5/Serial5.h" // if we use Asset Tracker
 
@@ -20,13 +14,14 @@ bool parseSeapHOx(); // parse response from SeapHOx of "ts" "gdata" or "glast" c
 // It is a private event.
 const char *eventName = "CpHOx2";
 
+// sampling interval min
+const int SAMPLE_INTERVAL_MIN = 15;
+
 // Various timing constants
 const unsigned long MAX_TIME_TO_PUBLISH_MS = 60000; // Only stay awake for 60 seconds trying to connect to the cloud and publish
 const unsigned long TIME_AFTER_PUBLISH_MS = 4000; // After publish, wait 4 seconds for data to go out
 const unsigned long TIME_AFTER_BOOT_MS = 5000; // At boot, wait 5 seconds before going to sleep again (after coming online)
-const unsigned long SLEEP_TIME_SEC = 1800; // Deep sleep time
 const unsigned long TIMEOUT_SEAPHOX_MS = 5000; // Max wait time for SeapHOx response
-const unsigned long PARTICLE_CONNECTION_TIME = 5000; // Max wait for particle to connect with cloud
 
 // SeapHOx struct for response variables
 String responseStr;
@@ -71,7 +66,6 @@ enum State { PUBLISH_STATE, SLEEP_STATE };
 State state = PUBLISH_STATE;
 
 unsigned long stateTime = 0;
-unsigned long lastSerial = 0;
 
 void setup() {
   //set charging current to 1024mA (512 + 512 offset) (charge faster!):
@@ -84,135 +78,146 @@ void setup() {
   Serial.begin(9600);
   Serial.println("Awake. Turn cell on.");
 
-  //set up serial connection with seaPhox
-  Serial1.begin(115200);
-
   // SeapHOx serial; wait TIMEOUT_SEAPHOX_MS for a line to arrive
-  if(Serial1.available())
-  {
-    Serial1.setTimeout(TIMEOUT_SEAPHOX_MS);
-  }
+  Serial1.begin(115200);
+  Serial1.setTimeout(TIMEOUT_SEAPHOX_MS);
 }
 
 
-void loop()
-{
+void loop() {
+
+  //////////////////////////////////////////////////////////////////////////////
   // Enter state machine
-  switch(state)
-  {
+  switch(state) {
 
-    /*** PUBLISH_STATE ***/
-    /*** Get here from PUBLISH_STATE. Ensure that we're connected to Particle Cloud.
-    If so, poll SeapHOx, parse response, and send that and GPS info to cloud then
-    go to SLEEP_STATE
-    If not connected, still poll SeapHOx and print out response over USB serial then go to SLEEP_STATE.
-    ***/
-    case PUBLISH_STATE:
+  //////////////////////////////////////////////////////////////////////////////
+  /*** PUBLISH_STATE ***/
+  /*** Get here from PUBLISH_STATE. Ensure that we're connected to Particle Cloud.
+  If so, poll SeapHOx, parse response, and send that and GPS info to cloud then
+  go to SLEEP_STATE
+  If not connected, still poll SeapHOx and print out response over USB serial then go to SLEEP_STATE.
+  ***/
+  case PUBLISH_STATE: {
+    
+    bool isMaxTime = false;
+
+    // Poll SeapHOx:
+    // Clean out any residual junk in buffer and restart serial port
+    Serial1.end();
+    delay(1000);
+    Serial1.begin(115200);
+    delay(500);
+    Serial1.setTimeout(TIMEOUT_SEAPHOX_MS);
+
+    // Get data in file after current file pointer
+    Serial1.println("glast");
+
+    // Read SeapHOx response
+    responseStr = Serial1.readString();			// read response
+    Serial.println(responseStr);
+
+    /*
+    #0000018        2019/05/16 21:45:00     17.07    0.98129        -1.947584       -2.048000       -1.21   22.08   25.2Error.txt f_read error: FR_OK
+    34      -0.889  -26.102509         -inf  0.0001 -2.0480 4835    496     -0.294  -0.106  21.158    21.Error.txt f_read error: FR_OK
+    4453      0.00022          0.0107
+    !
+    */
+
+    String s2 = responseStr.replace("Error.txt f_read error: FR_OK\r\n", "");
+
+    Serial.println(s2);
+    /*
+    glast
+    #0000018        2019/05/16 21:45:00     17.07    0.98129        -1.947584       -2.048000       -1.21   22.08   25.234  -0.889-26.102509          -inf  0.0001 -2.0480 4835    496     -0.294  -0.106  21.158    21.4453         0.00022          0.0107
+    !
+    */
+    const char* s_args = s2.c_str();
+    char* each_var = strtok(strdup(s_args), "\t");
+
+    char data[120];
+    float cellVoltage = batteryMonitor.getVCell();
+    float stateOfCharge = batteryMonitor.getSoC();
+    
+    // Parse SeapHOx response and populate SeapHOx struct 
+    if (parseSeapHOx(each_var)){
+      // Put Electron, SeapHOx, and GPS data into data buffer and print to screen
+      snprintf(data, sizeof(data), "%s,%s,%.3f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.02f,%.02f",
+                SeapHOx_Cell.Board_Date, SeapHOx_Cell.Board_Time,
+                SeapHOx_Cell.Main_Batt_Volt, SeapHOx_Cell.V_FET_INT,
+                SeapHOx_Cell.V_FET_EXT, SeapHOx_Cell.V_Pressure,
+                SeapHOx_Cell.pHINT, SeapHOx_Cell.O2uM,
+                SeapHOx_Cell.SBE37_Temp, SeapHOx_Cell.SBE37_Salinity,
+                cellVoltage, stateOfCharge
+              );
+      Serial.println(data);
+    }
+    else{
+      snprintf(data, sizeof(data), "%s,%s,%.3f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.02f,%.02f",
+                "invalid", SeapHOx_Cell.Board_Time,
+                SeapHOx_Cell.Main_Batt_Volt, SeapHOx_Cell.V_FET_INT,
+                SeapHOx_Cell.V_FET_EXT, SeapHOx_Cell.V_Pressure,
+                SeapHOx_Cell.pHINT, SeapHOx_Cell.O2uM,
+                SeapHOx_Cell.SBE37_Temp, SeapHOx_Cell.SBE37_Salinity,
+                cellVoltage, stateOfCharge
+              );
+      Serial.println(data);
+    }
+
+    stateTime = millis();
+
+    while(!isMaxTime)
     {
-      // Poll SeapHOx:
-      // Clean out any residual junk in buffer and restart serial port
-      Serial1.end();
-      delay(1000);
-
-      //serial connection with seaphox
-      Serial1.begin(115200);
-      delay(500);
-
-      if(Serial1.available())
+      //connect particle to the cloud
+      if (Particle.connected() == false) 
       {
-        //send command to seaphox
-        Serial1.println("glast");
-
-        // Read SeapHOx response
-        responseStr = Serial1.readString();
-        String modifiedResponse = responseStr.replace("Error.txt f_read error: FR_OK\r\n", "");
-
-        //convert to c string
-        const char* s_args = modifiedResponse.c_str();
-        char* each_var = strtok(strdup(s_args), "\t");
-
-        Serial.println(modifiedResponse);
-
-        // Parse SeapHOx response
-        if(parseSeapHOx(each_var))
-        {
-          // Put Electron, SeapHOx, and GPS data into data buffer and print to screen
-          char data[120];
-          float cellVoltage = batteryMonitor.getVCell();
-          float stateOfCharge = batteryMonitor.getSoC();
-          snprintf(data, sizeof(data), "%s,%s,%.3f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.02f,%.02f",
-                    SeapHOx_Cell.Board_Date, SeapHOx_Cell.Board_Time,
-                    SeapHOx_Cell.Main_Batt_Volt, SeapHOx_Cell.V_FET_INT,
-                    SeapHOx_Cell.V_FET_EXT, SeapHOx_Cell.V_Pressure,
-                    SeapHOx_Cell.pHINT, SeapHOx_Cell.O2uM,
-                    SeapHOx_Cell.SBE37_Temp, SeapHOx_Cell.SBE37_Salinity,
-                    cellVoltage, stateOfCharge
-                  );
-          Serial.println(data);
-
-          // connect to the cloud
-          Particle.connect();
-          //TODO add delay for connection time and check is it less or more
-          delay(PARTICLE_CONNECTION_TIME);
-
-          // If connected, publish data buffer to cloud
-          if (Particle.connected())
-          {
-            Particle.publish(eventName, data, 60, PRIVATE);
-
-            // Wait for the publish to go out by spinning here till enough time has elapsed
-            stateTime = millis();
-            while (millis() - stateTime < TIME_AFTER_PUBLISH_MS) {
-              delay(10);
-            }
-            state = SLEEP_STATE;
-          }
-          // If not connected, go to sleep to save battery
-          else
-          {
-            Serial.println("Error: Particle could not connect to the cloud");
-            state = SLEEP_STATE;
-          }
-        }
-        else
-        {
-          Serial.println("Error: Data parsing error, Could not Parse data");
-          state = SLEEP_STATE;
-        }
+        Particle.connect();
       }
-      else
+
+      // If connected, publish data buffer
+      if (Particle.connected()) 
       {
-        Serial.println("Error: No Serail Connection with seaPhox");
+        Serial.println("publishing data");
+        Particle.publish(eventName, data, 60, PRIVATE);
+
+        // Wait for the publish data
+        delay(TIME_AFTER_PUBLISH_MS);
+        isMaxTime = true;
         state = SLEEP_STATE;
       }
+      // If not connected after certain amount of time, go to sleep to save battery
+      else 
+      {
+        // Took too long to publish, just go to sleep
+        if (millis() - stateTime >= MAX_TIME_TO_PUBLISH_MS) 
+        {
+          isMaxTime = true;
+          state = SLEEP_STATE;
+          Serial.println("max time for pulishing reach");
+        }
+        Serial.println("Not max time, try again to publish");
+      }
     }
-    break;
+  }
+  break;
 
-    /*** SLEEP_STATE ***/
-    /*** Get here from PUBLISH_STATE and go to GPS_WAIT_STATE (if code makes it that far)
-    or SLEEP_MODE_DEEP after calculating a wakeup time based off of the current time from the cloud.
-    ***/
-    case SLEEP_STATE:
-    {
-      Serial.println("going to sleep");
-      delay(500);
+  //////////////////////////////////////////////////////////////////////////////
+  /*** SLEEP_STATE ***/
+  /*** Get here from PUBLISH_STATE and go to GPS_WAIT_STATE (if code makes it that far)
+  or SLEEP_MODE_DEEP after calculating a wakeup time based off of the current time from the cloud.
+  ***/
+  case SLEEP_STATE: {
+    Serial.println("going to sleep");
+    delay(500);
 
-      // Calculate sleep time
-      int nextSampleMin = 5; // sample at 5 past the hour
-      int currentHour = Time.hour();
-      int currentSecond = Time.now()%86400; // in UTC
+    int nextSampleMin = 5; // sample at 5 past the hour
+    int secondsToSleep = (SAMPLE_INTERVAL_MIN + nextSampleMin) * 60 ;
 
-      // Calculate seconds since midnight of next sample
-      int nextSampleSec = (currentHour+1)*60*60+nextSampleMin*60; // sample at this time
-      int secondsToSleep = nextSampleSec - currentSecond;
-      Serial.printf("Sleep for %d seconds\n", secondsToSleep);
-      System.sleep(SLEEP_MODE_DEEP, secondsToSleep);
+    Serial.printf("Sleep for %d seconds\n", secondsToSleep);
+   	System.sleep(SLEEP_MODE_DEEP, secondsToSleep);
 
-      // It'll only make it here if the sleep call doesn't work for some reason
-      stateTime = millis();
-      state = PUBLISH_STATE;
-    }
-    break;
+    state = PUBLISH_STATE;
+  }
+  break;
 
   }
 }
@@ -260,8 +265,8 @@ bool parseSeapHOx(char* new_var){
                 );
     return true;
   }
-  else
-  {
+  else{
+    Serial.printf("Error: improper or incomplete data receive from seaPHOX");
     return false;
   }
 }
