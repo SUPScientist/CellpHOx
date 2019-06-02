@@ -195,8 +195,8 @@ void loop() {
     Serial.println("going to sleep");
     delay(500);
 
-    int nextSampleMin = 5; // sample at 5 past the hour
-    int secondsToSleep = (SAMPLE_INTERVAL_MIN + nextSampleMin) * 60 ;
+    long long milliSecondToSleep = ( (SAMPLE_INTERVAL_MIN * 60000) - (millis() - stateTime ) );
+    int secondsToSleep = ( milliSecondToSleep / 1000 ) ;
 
     Serial.printf("Sleep for %d seconds\n", secondsToSleep);
    	System.sleep(SLEEP_MODE_DEEP, secondsToSleep);
