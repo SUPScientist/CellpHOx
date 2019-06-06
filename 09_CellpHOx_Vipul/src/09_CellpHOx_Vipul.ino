@@ -1,3 +1,10 @@
+/*
+ * Project seaPHOX
+ * Description:
+ * Author: Vipul Lakhani
+ * Date: June 2019
+ */
+
 #include "Particle.h"
 // #include "Serial5/Serial5.h" // if we use Asset Tracker
 
@@ -15,7 +22,7 @@ bool parseSeapHOx(); // parse response from SeapHOx of "ts" "gdata" or "glast" c
 const char *eventName = "CpHOx2";
 
 // Various timing constants
-const int SAMPLE_INTERVAL_MIN = 15; // sampling interval min
+const int SAMPLE_INTERVAL_MIN = 15; // sampling interval from seapHOX in minutes
 const unsigned long MAX_TIME_TO_PUBLISH_MS = 60000; // Only stay awake for 60 seconds trying to connect to the cloud and publish
 const unsigned long TIME_AFTER_PUBLISH_MS = 4000; // After publish, wait 4 seconds for data to go out
 const unsigned long TIME_AFTER_BOOT_MS = 5000; // At boot, wait 5 seconds before going to sleep again (after coming online)
@@ -111,7 +118,7 @@ void loop() {
     Serial1.println("glast");
 
     // Read SeapHOx response
-    responseStr = Serial1.readString();			// read response
+    responseStr = Serial1.readString();	
     Serial.println(responseStr);
 
     String s2 = responseStr.replace("Error.txt f_read error: FR_OK\r\n", "");
@@ -196,7 +203,7 @@ void loop() {
     delay(500);
 
     long long milliSecondToSleep = ( (SAMPLE_INTERVAL_MIN * 60000) - (millis() - stateTime ) );
-    int secondsToSleep = ( milliSecondToSleep / 1000 ) ;
+    int secondsToSleep = ( milliSecondToSleep / 1000 ) ; //convert into seconds
 
     Serial.printf("Sleep for %d seconds\n", secondsToSleep);
    	System.sleep(SLEEP_MODE_DEEP, secondsToSleep);
