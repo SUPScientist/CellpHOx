@@ -1,3 +1,10 @@
+/*
+ * Project seaPHOX
+ * Description:
+ * Author: Vipul Lakhani
+ * Date: June 2019
+ */
+
 #include "Particle.h"
 // #include "Serial5/Serial5.h" // if we use Asset Tracker
 
@@ -14,10 +21,8 @@ bool parseSeapHOx(); // parse response from SeapHOx of "ts" "gdata" or "glast" c
 // It is a private event.
 const char *eventName = "CpHOx2";
 
-// sampling interval min
-const int SAMPLE_INTERVAL_MIN = 15;
-
 // Various timing constants
+const int SAMPLE_INTERVAL_MIN = 15; // sampling interval from seapHOX in minutes
 const unsigned long MAX_TIME_TO_PUBLISH_MS = 60000; // Only stay awake for 60 seconds trying to connect to the cloud and publish
 const unsigned long TIME_AFTER_PUBLISH_MS = 4000; // After publish, wait 4 seconds for data to go out
 const unsigned long TIME_AFTER_BOOT_MS = 5000; // At boot, wait 5 seconds before going to sleep again (after coming online)
@@ -113,24 +118,12 @@ void loop() {
     Serial1.println("glast");
 
     // Read SeapHOx response
-    responseStr = Serial1.readString();			// read response
+    responseStr = Serial1.readString();	
     Serial.println(responseStr);
 
-    /*
-    #0000018        2019/05/16 21:45:00     17.07    0.98129        -1.947584       -2.048000       -1.21   22.08   25.2Error.txt f_read error: FR_OK
-    34      -0.889  -26.102509         -inf  0.0001 -2.0480 4835    496     -0.294  -0.106  21.158    21.Error.txt f_read error: FR_OK
-    4453      0.00022          0.0107
-    !
-    */
-
     String s2 = responseStr.replace("Error.txt f_read error: FR_OK\r\n", "");
-
     Serial.println(s2);
-    /*
-    glast
-    #0000018        2019/05/16 21:45:00     17.07    0.98129        -1.947584       -2.048000       -1.21   22.08   25.234  -0.889-26.102509          -inf  0.0001 -2.0480 4835    496     -0.294  -0.106  21.158    21.4453         0.00022          0.0107
-    !
-    */
+
     const char* s_args = s2.c_str();
     char* each_var = strtok(strdup(s_args), "\t");
 
@@ -209,8 +202,8 @@ void loop() {
     Serial.println("going to sleep");
     delay(500);
 
-    int nextSampleMin = 5; // sample at 5 past the hour
-    int secondsToSleep = (SAMPLE_INTERVAL_MIN + nextSampleMin) * 60 ;
+    long long milliSecondToSleep = ( (SAMPLE_INTERVAL_MIN * 60000) - (millis() - stateTime ) );
+    int secondsToSleep = ( milliSecondToSleep / 1000 ) ; //convert into seconds
 
     Serial.printf("Sleep for %d seconds\n", secondsToSleep);
    	System.sleep(SLEEP_MODE_DEEP, secondsToSleep);
@@ -221,7 +214,6 @@ void loop() {
 
   }
 }
-
 
 bool parseSeapHOx(char* new_var){
  	// Parse SeapHOx response
