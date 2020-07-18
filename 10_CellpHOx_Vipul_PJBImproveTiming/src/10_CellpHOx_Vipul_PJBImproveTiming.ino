@@ -8,6 +8,7 @@
 #include "Particle.h"
 // #include "Serial5/Serial5.h" // if we use Asset Tracker
 
+// SYSTEM_MODE(MANUAL);
 SYSTEM_MODE(AUTOMATIC);
 
 // Global objects
@@ -73,6 +74,7 @@ State state = PUBLISH_STATE;
 unsigned long stateTime = 0;
 
 void setup() {
+  // Cellular.off();
   //set charging current to 1024mA (512 + 512 offset) (charge faster!):
   pmic.setChargeCurrent(0,0,1,0,0,0);
 
@@ -84,7 +86,7 @@ void setup() {
   Serial.println("Awake. Turn cell on.");
 
   // SeapHOx serial; wait TIMEOUT_SEAPHOX_MS for a line to arrive
-  Serial1.begin(115200);
+  Serial1.begin(9600);
   Serial1.setTimeout(TIMEOUT_SEAPHOX_MS);
 }
 
@@ -110,7 +112,7 @@ void loop() {
     // Clean out any residual junk in buffer and restart serial port
     Serial1.end();
     delay(1000);
-    Serial1.begin(115200);
+    Serial1.begin(9600);
     delay(500);
     Serial1.setTimeout(TIMEOUT_SEAPHOX_MS);
 

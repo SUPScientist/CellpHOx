@@ -1,1 +1,3 @@
 TODO: Check to see if a waitFor statement is necessary in the Particle.connect() sequence in order to allow the thing to kick itself out of that blocking statement if it can't connect. Shouldn't be an issue in SYSTEM_MODE(AUTOMATIC) though. If it is added, a SYSTEM_THREAD(ENABLED) may need to be added at the top.
+
+https://script.google.com/macros/s/AKfycbxcWBgtKReyojeVN9iSMuBR3jMR4z6mmrJkPQppd_JLTIOOg-PU/exec
